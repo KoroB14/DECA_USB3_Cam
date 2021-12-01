@@ -74,5 +74,5 @@ Two auto DMA channels are used to move data. The FX3 SDK is required to build th
 
 # Software
 Simple python-based client are included.
-Tested on Ubuntu linux.  
+Tested on Ubuntu linux and Windows 10 (WinUSB driver).  
 Dependencies: Python 3.7+, NumPy, OpenCV, libusb-1.0, [python-libusb1](https://github.com/vpelletier/python-libusb1)

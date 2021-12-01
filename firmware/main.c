@@ -25,7 +25,7 @@ CyU3PReturnStatus_t StartGPIF(void);
 
 
 
-// Set up the CPU environment and start the RTOS
+// Set up the CPU environment the starts the RTOS
 int main (void)
 {
     CyU3PSysClockConfig_t ClockConfig;
@@ -217,10 +217,22 @@ CyBool_t USBSetup_Callback(uint32_t setupdat0, uint32_t setupdat1)
             {
                 if (Setup.Index == USB_CONSUMER_ENDPOINT)
                 {
-                    CyU3PUsbStall(Setup.Index, CyFalse, CyTrue);
-                    isHandled = CyTrue;
-                    CyU3PUsbAckSetup();
+                	CyU3PDmaChannelReset (&GPIF2USB_Handle);
+                	CyU3PUsbFlushEp(USB_CONSUMER_ENDPOINT);
+                	CyU3PUsbResetEp (USB_CONSUMER_ENDPOINT);
+                	CyU3PDmaChannelSetXfer (&GPIF2USB_Handle, 0);
                 }
+
+                if (Setup.Index == USB_PRODUCER_ENDPOINT)
+				{
+					CyU3PDmaChannelReset (&USB2GPIF_Handle);
+					CyU3PUsbFlushEp(USB_PRODUCER_ENDPOINT);
+					CyU3PUsbResetEp (USB_PRODUCER_ENDPOINT);
+					CyU3PDmaChannelSetXfer (&USB2GPIF_Handle, 0);
+				}
+                CyU3PUsbStall(Setup.Index, CyFalse, CyTrue);
+                CyU3PUsbAckSetup ();
+                isHandled = CyTrue;
             }
         }
     }
@@ -239,7 +251,7 @@ void USBEvent_Callback(CyU3PUsbEventType_t Event, uint16_t EventData )
     case CY_U3P_USB_EVENT_SETCONF:
         /* If the application is already active stop it before re-enabling. */
         if (glIsApplicationActive) StopApplication();
-
+        CyU3PUsbLPMDisable();
         StartApplication();
         break;
 
@@ -329,7 +341,7 @@ void StartApplication(void)
     
 
 	// Create a AUTO channel for the USB to GPIF transfer, USB detects and COMMITs the last short packet
-	dmaConfig.size           = 1024;			
+	dmaConfig.size           = 1024;			// Use same size buffers for all USB Speeds
 	dmaConfig.count          = 1;
 	dmaConfig.prodSckId		 = USB_PRODUCER_ENDPOINT_SOCKET;
 	dmaConfig.consSckId		 = GPIF_CONSUMER_SOCKET;
@@ -371,7 +383,8 @@ void StopApplication(void)
     CheckStatus(Status);
     Status = CyU3PUsbFlushEp(USB_PRODUCER_ENDPOINT);
     CheckStatus(Status);
-	CyU3PMemSet((uint8_t *)&epConfig, 0, sizeof(&epConfig));
+	CyU3PMemSet((uint8_t *)&epConfig, 0, sizeof(epConfig));
+	epConfig.enable = CyFalse;
     Status = CyU3PSetEpConfig(USB_CONSUMER_ENDPOINT, &epConfig);
 	CheckStatus(Status);
     Status = CyU3PSetEpConfig(USB_PRODUCER_ENDPOINT, &epConfig);

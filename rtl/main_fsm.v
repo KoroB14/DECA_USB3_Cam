@@ -64,14 +64,13 @@ reg [2:0] lat_count;
 reg [15:0] send_cnt;
 reg [15:0] line_cnt;
 reg [1:0] rdaddress;
-reg OEp;
 wire [15:0] fifo_data;
 wire fifo_full;
 wire fifo_empty;
 wire [XWORDS - 1 : 0] usedw;
 //assignments
 wire rdreq = (CurrentState == WRITE) && ((send_cnt <= WORDS - 2));
-assign DQ = OEp ? DATA : 16'hzzzz;
+assign DQ = WR ? DATA : 16'hzzzz;
 assign in_ready = ~fifo_full;
 
 //reg DMA flags
@@ -128,7 +127,6 @@ else
 //Control signals
 always @ (posedge USB_CLK) 
 begin
-	 OEp <= (CurrentState == WRITE) || (CurrentState == SEND_CFG);
 	 WR <= (CurrentState == WRITE) || (CurrentState == SEND_CFG) ;
 	 LastWRData <= (rdaddress == 'h02) && (CurrentState == SEND_CFG);
 	 RD <= (CurrentState == DR_READ) && (lat_count == 1);
@@ -177,7 +175,7 @@ always @ (*) begin
 	WAIT4DMA:	begin
 						if (DMA1_Ready_r) 
 							NextState = DR_READ;
-						else if (DMA0_Ready_r && ((usedw >= WORDS - 2) || (send_cnt > 0 && send_cnt <= WORDS - 1)) && !((send_cnt == WORDS) && WR)) 
+						else if (DMA0_Ready_r && ((usedw >= WORDS - 1) || (send_cnt > 0 && send_cnt < WORDS)) && !((send_cnt == WORDS) && WR)) 
 							NextState = WRITE; 
 					end	
 	WRITE:		begin

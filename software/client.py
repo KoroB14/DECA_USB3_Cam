@@ -161,6 +161,7 @@ def main():
             break    
                     
     handle._bulkTransfer(0x02, byref(STOP_ST),2, 1000)#send 
+    handle.resetDevice()
     handle.releaseInterface(0)
     handle.close()
 
